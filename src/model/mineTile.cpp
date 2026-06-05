@@ -57,6 +57,22 @@ void MineTile::render(sf::RenderWindow& window)
     window.draw(rightTrap);
     window.draw(line);
     window.draw(innerRect);
+
+    if (TileState::flagged == state)
+    {
+        drawFlag(window);
+    }
+    else if (TileState::questioned == state)
+    {
+        sf::Font font(std::filesystem::path("/System/Library/Fonts/Times.ttc"));
+        sf::Text question(font, "?", size.y * (3.f / 4));
+        sf::FloatRect bounds = question.getLocalBounds();
+
+        question.setOrigin(bounds.position + bounds.size / 2.f);
+        question.setPosition(location + size / 2.f);
+
+        window.draw(question);
+    }
 }
 
 void MineTile::resize(const sf::Vector2f& boardLoc, const sf::Vector2f& boardSize)
@@ -94,4 +110,24 @@ void MineTile::handleInput(const sf::Event& event)
 
 void MineTile::drawFlag(sf::RenderWindow& window)
 {
+    sf::RectangleShape poleRect({2, size.y * .5f});
+    poleRect.setPosition({location.x + (size.x * .5f) - 1, location.y + (size.y / 4)});
+    poleRect.setOutlineColor(sf::Color(0, 0, 0));
+    poleRect.setFillColor(sf::Color(0, 0, 0));
+
+    sf::RectangleShape baseRect({size.x / 3, 2});
+    baseRect.setPosition({location.x + (size.x / 3), location.y + (size.y * (3.f / 4))});
+    baseRect.setOutlineColor(sf::Color(0, 0, 0));
+    baseRect.setFillColor(sf::Color(0, 0, 0));
+
+    sf::ConvexShape flag(3);
+    flag.setPoint(0, {location.x + (size.x / 2), location.y + (size.y / 4)});
+    flag.setPoint(1, {location.x + size.y * (3.f / 4), location.y + size.y * (3.f / 8)});
+    flag.setPoint(2, {location.x + size.x / 2, location.y + size.y / 2});
+    flag.setFillColor(sf::Color::Red);
+    flag.setOutlineColor(sf::Color::Red);
+
+    window.draw(poleRect);
+    window.draw(baseRect);
+    window.draw(flag);
 }
