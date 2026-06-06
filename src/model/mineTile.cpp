@@ -64,7 +64,7 @@ void MineTile::render(sf::RenderWindow& window)
     }
     else if (TileState::questioned == state)
     {
-        sf::Font font(std::filesystem::path("/System/Library/Fonts/Times.ttc"));
+        sf::Font font(std::filesystem::path("fonts/mine-sweeper.ttf"));
         sf::Text question(font, "?", size.y * (3.f / 4));
         sf::FloatRect bounds = question.getLocalBounds();
 

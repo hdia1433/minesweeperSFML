@@ -1,4 +1,7 @@
 #include "gameBoard.hpp"
+#include "cstdlib"
+#include <algorithm>
+#include <ctime>
 #include <memory>
 
 GameBoard::GameBoard(const sf::Vector2f& location, const sf::Vector2f& size):
@@ -15,6 +18,8 @@ GameBoard::GameBoard(const sf::Vector2f& location, const sf::Vector2f& size):
             tile->setOnPressed([this](int row, int col) { tilePressed(row, col); });
         }
     }
+
+    srand(time(0));
 }
 
 const sf::Vector2f& GameBoard::getLocation() const
@@ -93,5 +98,51 @@ void GameBoard::handleInput(const sf::Event& event)
 
 void GameBoard::tilePressed(int row, int col)
 {
+    if (!generated)
+    {
+        generated = true;
+        for (uint i = 0; i < 10; i++)
+        {
+            sf::Vector2i bombLoc({rand() % 10, rand() % 10});
+
+            while ((bombLoc > sf::Vector2i{row - 1, col - 1} && bombLoc < sf::Vector2i{row + 1, col + 1}) ||
+                   hiddenTiles[row][col] == 9)
+            {
+                sf::Vector2i bombLoc({rand() % 10, rand() % 10});
+            }
+
+            hiddenTiles[bombLoc.x][bombLoc.y] = 9;
+
+            for (int inRow = std::max(bombLoc.x - 1, 0); inRow <= std::min(bombLoc.x + 1, (int)hiddenTiles.size());
+                 inRow++)
+            {
+                for (int inCol = std::max(bombLoc.y - 1, 0);
+                     inCol <= std::min(bombLoc.y + 1, (int)hiddenTiles[inRow].size()); inCol++)
+                {
+                    if ((inRow == row && inCol == col) || hiddenTiles[inRow][inCol] == 9)
+                    {
+                        continue;
+                    }
+
+                    hiddenTiles[inRow][inCol]++;
+                }
+            }
+        }
+    }
+
     tiles[row][col].reset();
+
+    if (0 == hiddenTiles[row][col])
+    {
+        for (int inRow = std::max(row - 1, 0); inRow <= std::min<int>(row + 1, tiles.size()); inRow++)
+        {
+            for (int inCol = std::max(col - 1, 0); inCol <= std::min<int>(col + 1, tiles[row].size()); inCol++)
+            {
+                if (tiles[inRow][inCol])
+                {
+                    tilePressed(inRow, inCol);
+                }
+            }
+        }
+    }
 }
