@@ -42,6 +42,29 @@ void GameBoard::render(sf::RenderWindow& window)
 
     window.draw(rect);
 
+    sf::RectangleShape inRect(size - 20);
+    inRect.setPosition(location + 10);
+    inRect.setOutlineThickness(2);
+    inRect.setOutlineColor(sf::Color::Black);
+    inRect.setFillColor(sf::Color::Transparent);
+
+    window.draw(inRect);
+
+    for (uint i = 1; i <= 9; i++)
+    {
+        sf::RectangleShape vLine({2, inRect.getSize().y});
+        vLine.setPosition({inRect.getPosition().x - 1 + (inRect.getSize().x / 10) * i, inRect.getPosition().y});
+        vLine.setFillColor(sf::Color::Black);
+
+        window.draw(vLine);
+
+        sf::RectangleShape hLine({inRect.getSize().x, 2});
+        hLine.setPosition({inRect.getPosition().x, inRect.getPosition().y - 1 + (inRect.getSize().y / 10) * i});
+        hLine.setFillColor(sf::Color::Black);
+
+        window.draw(hLine);
+    }
+
     for (auto& row : tiles)
     {
         for (std::unique_ptr<MineTile>& tile : row)
