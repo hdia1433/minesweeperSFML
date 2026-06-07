@@ -1,21 +1,26 @@
 #include "gameBoard.hpp"
 #include "cstdlib"
+#include "imgui.h"
 #include <algorithm>
 #include <ctime>
 #include <memory>
+#include <string>
 
 GameBoard::GameBoard(const sf::Vector2f& location, const sf::Vector2f& size):
     location(location),
     size(size),
     tiles(makeTileMap<10>(*this)),
     hiddenTiles({}),
-    generated(false)
+    generated(false),
+    flagsLeft(10)
 {
     for (auto& row : tiles)
     {
         for (std::unique_ptr<MineTile>& tile : row)
         {
             tile->setOnPressed([this](int row, int col) { tilePressed(row, col); });
+            tile->setFlagPlaced([this]() { flagPlaced(); });
+            tile->setFlagRemoved([this]() { flagRemoved(); });
         }
     }
 
@@ -34,6 +39,30 @@ const sf::Vector2f& GameBoard::getSize() const
 
 void GameBoard::render(sf::RenderWindow& window)
 {
+    ImGui::SetNextWindowPos(ImVec2(0, 0), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(window.getSize().x, 100), ImGuiCond_Always);
+
+    ImGuiWindowFlags flags =
+        ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoCollapse;
+
+    ImGui::Begin("##hidden_id", nullptr, flags);
+
+    ImGui::SetWindowFontScale(2.25);
+
+    ImGui::Dummy(ImVec2(0, 10));
+
+    float windowWidth = ImGui::GetWindowWidth();
+    std::string buf = "Flags left to place:";
+    float textWidth = ImGui::CalcTextSize(buf.c_str()).x;
+    ImGui::SetCursorPosX((windowWidth - textWidth) / 2);
+    ImGui::Text("%s", buf.c_str());
+
+    buf = std::to_string(flagsLeft);
+    textWidth = ImGui::CalcTextSize(buf.c_str()).x;
+    ImGui::SetCursorPosX((windowWidth - textWidth) / 2);
+    ImGui::Text("%s", buf.c_str());
+    ImGui::End();
+
     sf::RectangleShape rect(size);
     rect.setPosition(location);
     rect.setOutlineThickness(2);
@@ -63,6 +92,41 @@ void GameBoard::render(sf::RenderWindow& window)
         hLine.setFillColor(sf::Color::Black);
 
         window.draw(hLine);
+    }
+
+    for (uint row = 0; row < hiddenTiles.size(); row++)
+    {
+        for (uint col = 0; col < hiddenTiles[row].size(); col++)
+        {
+            int tile = hiddenTiles[row][col];
+
+            sf::Vector2f tilePos(inRect.getPosition() +
+                                 sf::Vector2f({(inRect.getSize().x / 10) * row, (inRect.getSize().y / 10) * col}));
+
+            if (tile > 8)
+            {
+                sf::CircleShape outMine((inRect.getSize().y / 10 - 10) / 2);
+                outMine.setPosition(tilePos + 5);
+                outMine.setFillColor(sf::Color(90, 90, 90));
+
+                sf::CircleShape inMine((inRect.getSize().y / 10 - 30) / 2);
+                inMine.setPosition(tilePos + 15);
+                inMine.setFillColor(sf::Color::Red);
+
+                window.draw(outMine);
+                window.draw(inMine);
+            }
+            else if (tile > 0)
+            {
+                sf::Font font(std::filesystem::path("fonts/mine-sweeper.ttf"));
+                sf::Text num(font, std::to_string(tile), (inRect.getSize().x / 10) / 2);
+                sf::FloatRect bounds = num.getLocalBounds();
+                num.setOrigin(bounds.position + bounds.size / 2.f);
+                num.setPosition(tilePos + inRect.getSize() / 10.f / 2.f);
+
+                window.draw(num);
+            }
+        }
     }
 
     for (auto& row : tiles)
@@ -129,18 +193,18 @@ void GameBoard::tilePressed(int row, int col)
             sf::Vector2i bombLoc({rand() % 10, rand() % 10});
 
             while ((bombLoc > sf::Vector2i{row - 1, col - 1} && bombLoc < sf::Vector2i{row + 1, col + 1}) ||
-                   hiddenTiles[row][col] == 9)
+                   hiddenTiles[bombLoc.x][bombLoc.y] == 9)
             {
-                sf::Vector2i bombLoc({rand() % 10, rand() % 10});
+                bombLoc = {rand() % 10, rand() % 10};
             }
 
             hiddenTiles[bombLoc.x][bombLoc.y] = 9;
 
-            for (int inRow = std::max(bombLoc.x - 1, 0); inRow <= std::min(bombLoc.x + 1, (int)hiddenTiles.size());
+            for (int inRow = std::max(bombLoc.x - 1, 0); inRow <= std::min(bombLoc.x + 1, (int)hiddenTiles.size() - 1);
                  inRow++)
             {
                 for (int inCol = std::max(bombLoc.y - 1, 0);
-                     inCol <= std::min(bombLoc.y + 1, (int)hiddenTiles[inRow].size()); inCol++)
+                     inCol <= std::min(bombLoc.y + 1, (int)hiddenTiles[inRow].size() - 1); inCol++)
                 {
                     if ((inRow == row && inCol == col) || hiddenTiles[inRow][inCol] == 9)
                     {
@@ -157,9 +221,9 @@ void GameBoard::tilePressed(int row, int col)
 
     if (0 == hiddenTiles[row][col])
     {
-        for (int inRow = std::max(row - 1, 0); inRow <= std::min<int>(row + 1, tiles.size()); inRow++)
+        for (int inRow = std::max(row - 1, 0); inRow <= std::min<int>(row + 1, tiles.size() - 1); inRow++)
         {
-            for (int inCol = std::max(col - 1, 0); inCol <= std::min<int>(col + 1, tiles[row].size()); inCol++)
+            for (int inCol = std::max(col - 1, 0); inCol <= std::min<int>(col + 1, tiles[row].size() - 1); inCol++)
             {
                 if (tiles[inRow][inCol])
                 {
@@ -168,4 +232,14 @@ void GameBoard::tilePressed(int row, int col)
             }
         }
     }
+}
+
+void GameBoard::flagPlaced()
+{
+    flagsLeft--;
+}
+
+void GameBoard::flagRemoved()
+{
+    flagsLeft++;
 }

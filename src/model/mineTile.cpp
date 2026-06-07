@@ -1,5 +1,6 @@
 #include "mineTile.hpp"
 #include "sfVectorOperators.hpp"
+#include <functional>
 
 MineTile::MineTile(): location(0, 0), size(0, 0), arrLoc(0, 0), state(TileState::none)
 {
@@ -13,9 +14,24 @@ MineTile::MineTile(const sf::Vector2f& location, const sf::Vector2f& size, const
 {
 }
 
+const sf::Vector2f MineTile::getPosition() const
+{
+    return location;
+}
+
 void MineTile::setOnPressed(std::function<void(int, int)> onPressed)
 {
     this->onPressed = onPressed;
+}
+
+void MineTile::setFlagPlaced(std::function<void()> flagPlaced)
+{
+    this->flagPlaced = flagPlaced;
+}
+
+void MineTile::setFlagRemoved(std::function<void()> flagRemoved)
+{
+    this->flagRemoved = flagRemoved;
 }
 
 void MineTile::render(sf::RenderWindow& window)
@@ -65,7 +81,7 @@ void MineTile::render(sf::RenderWindow& window)
     else if (TileState::questioned == state)
     {
         sf::Font font(std::filesystem::path("fonts/mine-sweeper.ttf"));
-        sf::Text question(font, "?", size.y * (3.f / 4));
+        sf::Text question(font, "?", size.y / 2);
         sf::FloatRect bounds = question.getLocalBounds();
 
         question.setOrigin(bounds.position + bounds.size / 2.f);
@@ -95,9 +111,11 @@ void MineTile::handleInput(const sf::Event& event)
                 {
                     case TileState::none:
                         state = TileState::flagged;
+                        flagPlaced();
                         break;
                     case TileState::flagged:
                         state = TileState::questioned;
+                        flagRemoved();
                         break;
                     case TileState::questioned:
                         state = TileState::none;

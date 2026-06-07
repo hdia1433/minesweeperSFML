@@ -13,6 +13,7 @@ class GameBoard
     std::array<std::array<std::unique_ptr<MineTile>, 10>, 10> tiles;
     std::array<std::array<int, 10>, 10> hiddenTiles;
     bool generated;
+    int flagsLeft;
 
   public:
     GameBoard(const sf::Vector2f& location, const sf::Vector2f& size);
@@ -30,6 +31,10 @@ class GameBoard
     void handleInput(const sf::Event& event);
 
     void tilePressed(int row, int col);
+
+    void flagPlaced();
+
+    void flagRemoved();
 };
 
 template <int size> std::array<std::array<std::unique_ptr<MineTile>, size>, size> makeTileMap(GameBoard& gameBoard)
@@ -43,7 +48,7 @@ template <int size> std::array<std::array<std::unique_ptr<MineTile>, size>, size
         for (uint col = 0; col < tileMap[row].size(); col++)
         {
             tileMap[row][col] = std::make_unique<MineTile>(
-                MineTile(gameBoard.getLocation() + 10 + sf::Vector2f(tileSize * (int)col, tileSize * (int)row),
+                MineTile(gameBoard.getLocation() + 10 + sf::Vector2f(tileSize * (int)row, tileSize * (int)col),
                          {(float)tileSize, (float)tileSize}, {(int)row, (int)col}));
         }
     }
