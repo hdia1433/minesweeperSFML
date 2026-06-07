@@ -16,6 +16,7 @@ class MineTile
     sf::Vector2f size;
     sf::Vector2i arrLoc;
     TileState state;
+    bool disabled;
 
     std::function<void(int, int)> onPressed;
 
@@ -28,6 +29,8 @@ class MineTile
     MineTile(const sf::Vector2f& location, const sf::Vector2f& size, const sf::Vector2i& arrLoc);
 
     const sf::Vector2f getPosition() const;
+
+    void setDisabled(bool disabled);
 
     void setOnPressed(std::function<void(int, int)> onPressed);
 

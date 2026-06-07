@@ -2,7 +2,7 @@
 #include "sfVectorOperators.hpp"
 #include <functional>
 
-MineTile::MineTile(): location(0, 0), size(0, 0), arrLoc(0, 0), state(TileState::none)
+MineTile::MineTile(): location(0, 0), size(0, 0), arrLoc(0, 0), state(TileState::none), disabled(false)
 {
 }
 
@@ -10,13 +10,18 @@ MineTile::MineTile(const sf::Vector2f& location, const sf::Vector2f& size, const
     location(location),
     size(size),
     arrLoc(arrLoc),
-    state(TileState::none)
+    state(TileState::none), disabled(false)
 {
 }
 
 const sf::Vector2f MineTile::getPosition() const
 {
     return location;
+}
+
+void MineTile::setDisabled(bool disabled)
+{
+    this->disabled = disabled;
 }
 
 void MineTile::setOnPressed(std::function<void(int, int)> onPressed)
@@ -99,7 +104,7 @@ void MineTile::handleInput(const sf::Event& event)
 {
     if (auto click = event.getIf<sf::Event::MouseButtonReleased>())
     {
-        if (click->position > location && click->position < location + size)
+        if (click->position > location && click->position < location + size && !disabled)
         {
             if (TileState::none == state && sf::Mouse::Button::Left == click->button)
             {

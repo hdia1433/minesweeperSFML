@@ -15,10 +15,16 @@ Controller::Controller():
     gameBoard(computeGameBoard(window.getSize()))
 {
     window.setFramerateLimit(60);
+
+    gameBoard.setRestart([this](){
+            restartGameBoard();
+            });
 }
 
 void Controller::start()
 {
+    gameBoard.ready();
+
     if (!ImGui::SFML::Init(window))
     {
         throw std::runtime_error("Couldn't load window");
@@ -57,6 +63,8 @@ void Controller::start()
 
         ImGui::SFML::Update(window, deltaClock.restart());
 
+        gameBoard.update();
+
         window.clear();
 
         gameBoard.render(window);
@@ -68,4 +76,13 @@ void Controller::start()
     ImGui::SFML::Shutdown();
 
     system("printf '\033[2A\033[0J'");
+}
+
+void Controller::restartGameBoard()
+{
+    gameBoard = GameBoard(computeGameBoard(window.getSize()));
+    gameBoard.setRestart([this](){
+            restartGameBoard();
+            });
+    gameBoard.ready();
 }

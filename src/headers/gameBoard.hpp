@@ -1,9 +1,17 @@
+#include <functional>
 #include <imgui-SFML.h>
 #include <imgui.h>
 #include <memory>
 
 #include "mineTile.hpp"
 #include "sfVectorOperators.hpp"
+
+enum PlayState
+{
+    playing,
+    lost,
+    won
+};
 
 class GameBoard
 {
@@ -14,6 +22,9 @@ class GameBoard
     std::array<std::array<int, 10>, 10> hiddenTiles;
     bool generated;
     int flagsLeft;
+    PlayState playState;
+
+    std::function<void()> restart;
 
   public:
     GameBoard(const sf::Vector2f& location, const sf::Vector2f& size);
@@ -21,6 +32,10 @@ class GameBoard
     const sf::Vector2f& getLocation() const;
 
     const sf::Vector2f& getSize() const;
+
+    void setRestart(std::function<void()> restart);
+
+    void ready();
 
     void update();
 

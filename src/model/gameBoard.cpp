@@ -3,8 +3,10 @@
 #include "imgui.h"
 #include <algorithm>
 #include <ctime>
+#include <functional>
 #include <memory>
 #include <string>
+#include <unistd.h>
 
 GameBoard::GameBoard(const sf::Vector2f& location, const sf::Vector2f& size):
     location(location),
@@ -12,7 +14,8 @@ GameBoard::GameBoard(const sf::Vector2f& location, const sf::Vector2f& size):
     tiles(makeTileMap<10>(*this)),
     hiddenTiles({}),
     generated(false),
-    flagsLeft(10)
+    flagsLeft(10),
+    playState(PlayState::playing)
 {
     for (auto& row : tiles)
     {
@@ -35,6 +38,51 @@ const sf::Vector2f& GameBoard::getLocation() const
 const sf::Vector2f& GameBoard::getSize() const
 {
     return size;
+}
+
+void GameBoard::setRestart(std::function<void()> restart)
+{
+    this->restart = restart;
+}
+
+void GameBoard::ready()
+{
+    for (auto& row : tiles)
+    {
+        for (std::unique_ptr<MineTile>& tile : row)
+        {
+            tile->setOnPressed([this](int row, int col) { tilePressed(row, col); });
+            tile->setFlagPlaced([this]() { flagPlaced(); });
+            tile->setFlagRemoved([this]() { flagRemoved(); });
+        }
+    }
+}
+
+void GameBoard::update()
+{
+    for(uint row = 0; row < hiddenTiles.size(); row++)
+    {
+        for(uint col = 0; col < hiddenTiles[row].size(); col++)
+        {
+            if(hiddenTiles[row][col] != 9 && tiles[row][col])
+            {
+                return;
+            }
+        }
+    }
+
+    for(auto& row: tiles)
+    {
+        for(std::unique_ptr<MineTile>& tile: row)
+        {
+            if(tile)
+            {
+                tile->setDisabled(true);
+            }
+        }
+    }
+
+    playState = PlayState::won;
 }
 
 void GameBoard::render(sf::RenderWindow& window)
@@ -139,6 +187,43 @@ void GameBoard::render(sf::RenderWindow& window)
             }
         }
     }
+
+    if(playState != PlayState::playing)
+    {
+        sf::RectangleShape darkenRect({(float)window.getSize().x, (float)window.getSize().y});
+        darkenRect.setPosition({0, 0});
+        darkenRect.setFillColor(sf::Color(0, 0, 0, 100));
+
+        window.draw(darkenRect);
+
+        ImVec2 winSize(100, 100);
+        ImGui::SetNextWindowSize(winSize, ImGuiCond_Always);
+        ImGui::SetNextWindowPos(ImVec2((window.getSize().x / 2.f) - (winSize.x / 2), (window.getSize().y / 2.f) - (winSize.y / 2)), ImGuiCond_Once);
+        std::string title;
+        if(PlayState::won == playState)
+        {
+            title = "You won!";
+        }
+        else 
+        {
+            title = "You lost.";
+        }
+
+        ImGui::Begin(title.c_str());
+        float windowWidth = ImGui::GetWindowWidth();
+        float buttonWidth = 120;
+        ImGui::SetCursorPosX((windowWidth - buttonWidth) / 2);
+        if (ImGui::Button("Restart", ImVec2(buttonWidth, 0)))
+        {
+            restart();
+        }
+        ImGui::SetCursorPosX((windowWidth - buttonWidth) / 2);
+        if(ImGui::Button("Quit", ImVec2(buttonWidth, 0)))
+        {
+            window.close();
+        }
+        ImGui::End();
+    }
 }
 
 void GameBoard::resize(const sf::Vector2u& windowSize)
@@ -192,7 +277,7 @@ void GameBoard::tilePressed(int row, int col)
         {
             sf::Vector2i bombLoc({rand() % 10, rand() % 10});
 
-            while ((bombLoc > sf::Vector2i{row - 1, col - 1} && bombLoc < sf::Vector2i{row + 1, col + 1}) ||
+            while ((bombLoc >= sf::Vector2i{row - 1, col - 1} && bombLoc <= sf::Vector2i{row + 1, col + 1}) ||
                    hiddenTiles[bombLoc.x][bombLoc.y] == 9)
             {
                 bombLoc = {rand() % 10, rand() % 10};
@@ -206,7 +291,7 @@ void GameBoard::tilePressed(int row, int col)
                 for (int inCol = std::max(bombLoc.y - 1, 0);
                      inCol <= std::min(bombLoc.y + 1, (int)hiddenTiles[inRow].size() - 1); inCol++)
                 {
-                    if ((inRow == row && inCol == col) || hiddenTiles[inRow][inCol] == 9)
+                    if ((inRow == bombLoc.x && inCol == bombLoc.y) || hiddenTiles[inRow][inCol] == 9)
                     {
                         continue;
                     }
@@ -231,6 +316,21 @@ void GameBoard::tilePressed(int row, int col)
                 }
             }
         }
+    }
+    else if(9 == hiddenTiles[row][col])
+    {
+        for(auto& row: tiles)
+        {
+            for(std::unique_ptr<MineTile>& tile: row)
+            {
+                if(tile)
+                {
+                    tile->setDisabled(true);
+                }
+            }
+        }
+
+        playState = PlayState::lost;
     }
 }
 

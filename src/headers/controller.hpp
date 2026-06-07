@@ -16,4 +16,6 @@ class Controller
     Controller();
 
     void start();
+
+    void restartGameBoard();
 };
