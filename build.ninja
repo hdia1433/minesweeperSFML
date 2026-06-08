@@ -4,8 +4,8 @@ ninja_required_version = 1.6
 subninja minesweeper.ninja
 
 # Default build target
-default minesweeper_Debug
+default minesweeper_Release
 
 # Workspace configuration targets
-build Debug: phony minesweeper_Debug
 build Release: phony minesweeper_Release
+build Debug: phony minesweeper_Debug
